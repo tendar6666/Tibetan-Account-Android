@@ -27,7 +27,7 @@
       <span class="toolbar-badge">༄༅། །བོད་ཀྱི་རྩིས་དེབ།</span>
       <div>
         <div style="font-size:14px;font-weight:700;">Tibetan Account Book • བོད་ཀྱི་རྩིས་དེབ། (iOS App)</div>
-        <div style="font-size:11.5px;color:#CBD5E1;">
+        <div style="font-size:12px;color:#CBD5E1;">
           Built on Windows • Installable on iPhone via Safari ("Add to Home Screen")
         </div>
       </div>
@@ -100,6 +100,9 @@
         <button class="new-book-btn" style="background:rgba(56,189,248,0.22);color:#7DD3FC;border-color:rgba(56,189,248,0.5);" onclick="openBackupAndCloudModal()">
           ☁️ སྤོ་བཤུགས།
         </button>
+        <button class="new-book-btn" style="background:rgba(167,243,208,0.22);color:#A7F3D0;border-color:rgba(167,243,208,0.5);" onclick="openHelpModal()" title="Bilingual FAQ & Help">
+          ❓ རོགས་རམ།
+        </button>
         <button class="new-book-btn" style="background:rgba(253,224,71,0.92);color:#4C0519;border-color:#FDE047;" onclick="openSupportCreatorModal()">
           🙏 རྒྱབ་སྐྱོར།
         </button>
@@ -117,6 +120,25 @@
     <div id="modalBackdrop" class="modal-backdrop" onclick="if(event.target===this) closeModal()">
       <div id="modalSheet" class="modal-sheet"></div>
     </div>
+
+    <!-- Hidden multi-file input for attaching bills, receipts and PDFs -->
+    <input
+      type="file"
+      id="billFileInput"
+      accept="image/*,application/pdf"
+      multiple
+      style="display:none"
+      onchange="handleBillFileInputChange(event)"
+    />
+
+    <!-- Lightbox Document Preview Modal Container (Feature 15) -->
+    <div id="lightboxContainer" style="display:none;"></div>
+
+    <!-- First-Run Onboarding Wizard Modal Container (Feature 24) -->
+    <div id="onboardingModal" class="modal-backdrop onboarding-modal-container" style="display:none;" onclick="if(event.target===this) closeOnboardingWizard()"></div>
+
+    <!-- Bilingual FAQ & Help Modal Container (Feature 25) -->
+    <div id="helpModal" class="modal-backdrop help-modal-container" style="display:none;" onclick="if(event.target===this) closeHelpModal()"></div>
   </main>
 
   <script src="app.js"></script>
