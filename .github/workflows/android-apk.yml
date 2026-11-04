@@ -1,0 +1,47 @@
+name: Build Native Android App (.apk)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APK on Ubuntu Cloud
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 3. Setup Java 21 (Required for Android Gradle Build)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: 4. Install Capacitor & Generate Native Android Project
+        run: |
+          npm install
+          npm run prepare-www
+          npx cap add android
+          npx cap sync android
+
+      - name: 5. Build Installable Android APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ../Tibetan-Account-Book-Android.apk
+
+      - name: 6. Upload Installable Android APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tibetan-Account-Book-Android-APK
+          path: Tibetan-Account-Book-Android.apk
+          retention-days: 90
