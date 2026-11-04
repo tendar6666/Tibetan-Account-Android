@@ -32,6 +32,21 @@ jobs:
           npx cap add android
           npx cap sync android
 
+      - name: 4.1. Lock Screen Orientation to Portrait
+        run: |
+          node -e '
+            const fs = require("fs");
+            const mf = "android/app/src/main/AndroidManifest.xml";
+            if (fs.existsSync(mf)) {
+              let c = fs.readFileSync(mf, "utf8");
+              if (!c.includes("android:screenOrientation=\"portrait\"")) {
+                c = c.replace("<activity", "<activity android:screenOrientation=\"portrait\"");
+                fs.writeFileSync(mf, c, "utf8");
+                console.log("Locked Android screenOrientation to portrait in AndroidManifest.xml");
+              }
+            }
+          '
+
       - name: 5. Build Installable Android APK
         run: |
           cd android
