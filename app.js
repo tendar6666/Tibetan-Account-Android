@@ -212,6 +212,7 @@ const DEFAULT_STATE = {
   currency: 'INR',
   customCurrencies: {},
   textSize: 'normal', // 'normal' | 'large' | 'xlarge'
+  photoQuality: 'standard', // 'compact' (~90KB, 1024px) | 'standard' (~150KB, 1280px) | 'hd' (~400KB, 1600px)
   // Accounting Skill Level: 'basic' (Clean Cash In/Out for shopkeepers/elders) | 'advance' (Full Contra, JV, Trial Balance & BS)
   accountingMode: 'basic',
   activeTab: 'ledger', // 'ledger' | 'heads' | 'account_ledger' | 'reports'
@@ -598,6 +599,7 @@ function sanitizeAndValidateState(incoming) {
   const allCurrencies = { ...CURRENCIES, ...(merged.customCurrencies || {}) };
   if (!allCurrencies[merged.currency]) merged.currency = 'INR';
   if (!['normal', 'large', 'xlarge'].includes(merged.textSize)) merged.textSize = 'normal';
+  if (!['compact', 'standard', 'hd'].includes(merged.photoQuality)) merged.photoQuality = 'standard';
   if (!merged.customCurrencies || typeof merged.customCurrencies !== 'object') merged.customCurrencies = {};
 
   if (!merged.periodFrom || typeof merged.periodFrom !== 'string') merged.periodFrom = DEFAULT_STATE.periodFrom;
@@ -642,6 +644,7 @@ function loadState() {
             ? parsed.customCurrencies
             : {},
         textSize: savedConfig.textSize || parsed.textSize || DEFAULT_STATE.textSize || 'normal',
+        photoQuality: savedConfig.photoQuality || parsed.photoQuality || DEFAULT_STATE.photoQuality || 'standard',
         accountingMode: savedConfig.accountingMode || parsed.accountingMode || DEFAULT_STATE.accountingMode,
         periodFrom: savedConfig.periodFrom || parsed.periodFrom || DEFAULT_STATE.periodFrom,
         periodTo: savedConfig.periodTo || parsed.periodTo || DEFAULT_STATE.periodTo,
@@ -681,6 +684,7 @@ function loadState() {
   if (savedConfig.lang) fresh.lang = savedConfig.lang;
   if (savedConfig.currency) fresh.currency = savedConfig.currency;
   if (savedConfig.textSize) fresh.textSize = savedConfig.textSize;
+  if (savedConfig.photoQuality) fresh.photoQuality = savedConfig.photoQuality;
   if (savedConfig.accountingMode) fresh.accountingMode = savedConfig.accountingMode;
   if (savedConfig.periodFrom) fresh.periodFrom = savedConfig.periodFrom;
   if (savedConfig.periodTo) fresh.periodTo = savedConfig.periodTo;
@@ -699,6 +703,7 @@ function saveState() {
         lang: state.lang,
         currency: state.currency,
         textSize: state.textSize || 'normal',
+        photoQuality: state.photoQuality || 'standard',
         accountingMode: state.accountingMode,
         periodFrom: state.periodFrom,
         periodTo: state.periodTo,
@@ -5743,7 +5748,14 @@ async function handleBillFileInputChange(event) {
     }
 
     try {
-      const compressed = await compressImageFile(file, 1600, 0.8);
+      const photoQualitySetting = (state && state.photoQuality) || 'standard';
+      const qualityPresets = {
+        compact: { maxDim: 1024, quality: 0.65 },
+        standard: { maxDim: 1280, quality: 0.72 },
+        hd: { maxDim: 1600, quality: 0.80 }
+      };
+      const preset = qualityPresets[photoQualitySetting] || qualityPresets.standard;
+      const compressed = await compressImageFile(file, preset.maxDim, preset.quality);
       // Unique ID for each attachment even with identical filenames (satisfies T2_F14_03)
       const attId = 'att_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
 
