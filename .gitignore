@@ -15,3 +15,5 @@ www/
 android/
 build/
 *.apk
+*.aab
+Playstore.aab/

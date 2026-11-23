@@ -54,7 +54,7 @@ jobs:
             echo "Custom Tibetan Account Book launcher icons generated!"
           fi
 
-      - name: 4.2. Lock Screen Orientation to Portrait & Update SDK Versions
+      - name: 4.2. Lock Screen Orientation to Portrait & Update SDK Versions (API 36)
         run: |
           node -e '
             const fs = require("fs");
@@ -71,10 +71,10 @@ jobs:
             if (fs.existsSync(varsFile)) {
               let v = fs.readFileSync(varsFile, "utf8");
               v = v.replace(/minSdkVersion\s*=\s*\d+/, "minSdkVersion = 24");
-              v = v.replace(/compileSdkVersion\s*=\s*\d+/, "compileSdkVersion = 35");
-              v = v.replace(/targetSdkVersion\s*=\s*\d+/, "targetSdkVersion = 35");
+              v = v.replace(/compileSdkVersion\s*=\s*\d+/, "compileSdkVersion = 36");
+              v = v.replace(/targetSdkVersion\s*=\s*\d+/, "targetSdkVersion = 36");
               fs.writeFileSync(varsFile, v, "utf8");
-              console.log("Updated variables.gradle: minSdkVersion=24, targetSdkVersion=35");
+              console.log("Updated variables.gradle: minSdkVersion=24, compileSdkVersion=36, targetSdkVersion=36");
             }
           '
 
@@ -97,9 +97,10 @@ jobs:
             const fs = require("fs");
             const bgPath = "android/app/build.gradle";
             let bg = fs.readFileSync(bgPath, "utf8");
-            bg = bg.replace("versionCode 1", "versionCode 3");
+            bg = bg.replace("versionCode 1", "versionCode 4");
             bg = bg.replace("versionName \"1.0\"", "versionName \"2.0.0\"");
             bg = bg.replace("minSdkVersion rootProject.ext.minSdkVersion", "minSdkVersion 24");
+            bg = bg.replace("targetSdkVersion rootProject.ext.targetSdkVersion", "targetSdkVersion 36");
             const signingBlock = `signingConfigs {
                 release {
                     storeFile file("release-keystore.jks")
@@ -113,7 +114,7 @@ jobs:
                     signingConfig signingConfigs.release`;
             bg = bg.replace(/buildTypes\s*\{\s*release\s*\{/, signingBlock);
             fs.writeFileSync(bgPath, bg, "utf8");
-            console.log("Configured release signing and minSdkVersion 24 in android/app/build.gradle");
+            console.log("Configured release signing, minSdkVersion 24, targetSdkVersion 36, versionCode 4 in android/app/build.gradle");
           '
 
       - name: 5. Build Signed Google Play App Bundle (.aab) & Installable APK (.apk)
