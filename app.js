@@ -213,6 +213,8 @@ const DEFAULT_STATE = {
   customCurrencies: {},
   textSize: 'normal', // 'normal' | 'large' | 'xlarge'
   photoQuality: 'standard', // 'compact' (~90KB, 1024px) | 'standard' (~150KB, 1280px) | 'hd' (~400KB, 1600px)
+  // Android Edition: 100% Free Forever (Trial Balance & Balance Sheet Unlocked by Default)
+  isAuditPackUnlocked: true,
   // Accounting Skill Level: 'basic' (Clean Cash In/Out for shopkeepers/elders) | 'advance' (Full Contra, JV, Trial Balance & BS)
   accountingMode: 'basic',
   activeTab: 'ledger', // 'ledger' | 'heads' | 'account_ledger' | 'reports'
@@ -604,6 +606,7 @@ function sanitizeAndValidateState(incoming) {
 
   if (!merged.periodFrom || typeof merged.periodFrom !== 'string') merged.periodFrom = DEFAULT_STATE.periodFrom;
   if (!merged.periodTo || typeof merged.periodTo !== 'string') merged.periodTo = DEFAULT_STATE.periodTo;
+  merged.isAuditPackUnlocked = true;
 
   return sanitizeRemovedUpiHead(merged);
 }
@@ -646,6 +649,7 @@ function loadState() {
         textSize: savedConfig.textSize || parsed.textSize || DEFAULT_STATE.textSize || 'normal',
         photoQuality: savedConfig.photoQuality || parsed.photoQuality || DEFAULT_STATE.photoQuality || 'standard',
         accountingMode: savedConfig.accountingMode || parsed.accountingMode || DEFAULT_STATE.accountingMode,
+        isAuditPackUnlocked: true,
         periodFrom: savedConfig.periodFrom || parsed.periodFrom || DEFAULT_STATE.periodFrom,
         periodTo: savedConfig.periodTo || parsed.periodTo || DEFAULT_STATE.periodTo,
         accountHeads:
@@ -686,6 +690,7 @@ function loadState() {
   if (savedConfig.textSize) fresh.textSize = savedConfig.textSize;
   if (savedConfig.photoQuality) fresh.photoQuality = savedConfig.photoQuality;
   if (savedConfig.accountingMode) fresh.accountingMode = savedConfig.accountingMode;
+  fresh.isAuditPackUnlocked = true;
   if (savedConfig.periodFrom) fresh.periodFrom = savedConfig.periodFrom;
   if (savedConfig.periodTo) fresh.periodTo = savedConfig.periodTo;
   applyTextSize(fresh.textSize);
@@ -705,6 +710,7 @@ function saveState() {
         textSize: state.textSize || 'normal',
         photoQuality: state.photoQuality || 'standard',
         accountingMode: state.accountingMode,
+        isAuditPackUnlocked: Boolean(state.isAuditPackUnlocked),
         periodFrom: state.periodFrom,
         periodTo: state.periodTo,
         showDrCr: state.showDrCr,
@@ -741,6 +747,26 @@ function applyTextSize(size = (typeof state !== 'undefined' && state && state.te
     if (document.body) {
       document.body.setAttribute('data-text-size', size);
     }
+  }
+}
+
+// Receipt Photo Quality & Compression Setting (iPhone 15/16/17 Pro Max Optimization)
+function setPhotoQuality(quality) {
+  if (!['compact', 'standard', 'hd'].includes(quality)) quality = 'standard';
+  state.photoQuality = quality;
+  saveState();
+  showToast(
+    quality === 'compact'
+      ? t('⚡ འདྲ་པར་གྱི་སྤུས་ཚད་ཆུང་ཤོས་སྒྲིག་ཟིན། (~90KB)', 'Photo Quality set to Compact (~90KB)')
+      : quality === 'hd'
+      ? t('🖼️ འདྲ་པར་གྱི་སྤུས་ཚད་མཐོ་ཤོས་སྒྲིག་ཟིན། (~400KB)', 'Photo Quality set to Full HD (~400KB)')
+      : t('📄 འདྲ་པར་གྱི་སྤུས་ཚད་ཚད་ལྡན་སྒྲིག་ཟིན། (~150KB)', 'Photo Quality set to Crisp Standard (~150KB)')
+  );
+  if (typeof renderAll === 'function') renderAll();
+  const sheet = document.getElementById('modalSheet');
+  const backdrop = document.getElementById('modalBackdrop');
+  if (sheet && backdrop && backdrop.classList.contains('open')) {
+    openAppSettingsModal();
   }
 }
 
@@ -3114,6 +3140,254 @@ function shareReceiptWhatsApp(txId) {
   showToast(t('བྱུང་འཛིན་འཕྲིན་ཐུང་ངོ་བཤུས་བླངས་ཟིན།', 'Voucher copied & opening WhatsApp!'));
 }
 
+// ============================================================================
+// IN-APP PURCHASE: ADVANCE AUDIT PACK ($0.99 Non-Consumable Lifetime Unlock)
+// Product ID: com.tenzintendar.tibetanaccountbook.auditpack
+// App Store Guideline 3.1.1 Compliant (Clear pricing, value proposition & Restore)
+// ============================================================================
+const AUDIT_PACK_PRODUCT_ID = 'com.tenzintendar.tibetanaccountbook.auditpack';
+
+function renderLockedAuditPackCard() {
+  return `
+    <div class="report-card no-print" style="border:2px solid #D97706;background:linear-gradient(180deg, #FFFDF7 0%, #FEF3C7 100%);padding:18px 14px;margin-bottom:14px;box-shadow:0 6px 18px rgba(217,119,6,0.12);border-radius:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#92400E,#B45309);display:flex;align-items:center;justify-content:center;font-size:24px;color:#FEF08A;box-shadow:0 4px 10px rgba(180,83,9,0.25);">
+            🔒
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:900;color:#78350F;">
+              ${t('ཚོད་བལྟའི་རྩིས་ཤོག་དང་ལྷག་ཤོག', 'Trial Balance & Balance Sheet')}
+            </div>
+            <div style="font-size:11.5px;color:#92400E;font-weight:700;">
+              💎 ${t('Advance Audit Pack • ཆེད་ལས་རྩིས་ཞིབ།', 'Advance Audit Pack • Professional Audit Suite')}
+            </div>
+          </div>
+        </div>
+        <span class="badge" style="background:#F59E0B;color:#FFF;font-size:11.5px;font-weight:900;padding:4px 10px;border-radius:99px;box-shadow:0 2px 6px rgba(245,158,11,0.3);">
+          $0.99 / ₹99
+        </span>
+      </div>
+
+      <div style="font-size:12.5px;color:#451A03;line-height:1.6;margin-bottom:14px;">
+        ${t(
+          'ཚོད་བལྟའི་རྩིས་ཤོག་ (Trial Balance) དང་ལྷག་ཤོག་ (Balance Sheet) ཆ་ཚང་དང་། རྩིས་ཞིབ་ Excel/CSV ཕྱིར་འདྲེན། པར་འདེབས་བཅས་ཐེངས་གཅིག་སྤྲད་དེ་ཚེ་གང་བཀོལ་སྤྱོད་གནང་ཐུབ།',
+          'Unlock the complete Double-Entry Audit Pack: Full 5-column Trial Balance, Automatic Matched Balance Sheet, Bilingual Excel/CSV audit export, and printable reports. One-time lifetime unlock for $0.99 (₹99).'
+        )}
+      </div>
+
+      <!-- Feature Pill Badges -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div style="background:#FFFFFF;border:1px solid #FCD34D;border-radius:10px;padding:8px 10px;font-size:11.5px;font-weight:700;color:#78350F;display:flex;align-items:center;gap:6px;">
+          <span>⚖️</span>
+          <span>${t('ཚོད་བལྟའི་རྩིས་ཤོག', '5-Col Trial Balance')}</span>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #FCD34D;border-radius:10px;padding:8px 10px;font-size:11.5px;font-weight:700;color:#78350F;display:flex;align-items:center;gap:6px;">
+          <span>🏛️</span>
+          <span>${t('ལྷག་ཤོག་ཆ་སྙོམས།', 'Matched Balance Sheet')}</span>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #FCD34D;border-radius:10px;padding:8px 10px;font-size:11.5px;font-weight:700;color:#78350F;display:flex;align-items:center;gap:6px;">
+          <span>📊</span>
+          <span>${t('CSV རྩིས་ཞིབ་ཕྱིར་འདྲེན།', 'Bilingual CSV Export')}</span>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #FCD34D;border-radius:10px;padding:8px 10px;font-size:11.5px;font-weight:700;color:#78350F;display:flex;align-items:center;gap:6px;">
+          <span>🖨️</span>
+          <span>${t('པར་འདེབས་དང་ PDF', 'Print & Save PDF')}</span>
+        </div>
+      </div>
+
+      <!-- Preview Teaser (Simulated blurred preview table) -->
+      <div style="position:relative;background:#FFFFFF;border:1.5px dashed #CBD5E1;border-radius:10px;padding:10px;margin-bottom:14px;overflow:hidden;opacity:0.8;">
+        <table class="fin-table" style="font-size:11px;filter:blur(1.5px);user-select:none;pointer-events:none;">
+          <thead>
+            <tr>
+              <th style="text-align:left;">${t('རྩིས་འགོ།', 'Account Head')}</th>
+              <th style="text-align:right;">${t('ཐོག་མ།', 'Opening')}</th>
+              <th style="text-align:right;">${t('གཡོན།', 'Debit')}</th>
+              <th style="text-align:right;">${t('གཡས།', 'Credit')}</th>
+              <th style="text-align:right;">${t('མཐའ་མ།', 'Closing')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>💵 Cash in Hand</td><td style="text-align:right;">15,000</td><td style="text-align:right;">4,500</td><td style="text-align:right;">1,200</td><td style="text-align:right;">18,300</td></tr>
+            <tr><td>🏦 State Bank of India</td><td style="text-align:right;">25,000</td><td style="text-align:right;">12,000</td><td style="text-align:right;">3,500</td><td style="text-align:right;">33,500</td></tr>
+            <tr><td>🛍️ Sales Revenue</td><td style="text-align:right;">0</td><td style="text-align:right;">0</td><td style="text-align:right;">16,500</td><td style="text-align:right;">16,500</td></tr>
+          </tbody>
+        </table>
+        <div style="position:absolute;inset:0;background:rgba(255,255,255,0.45);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#92400E;">
+          🔒 ${t('Advance Audit Pack ནང་གཟིགས་ཐུབ།', 'Locked Preview • Advance Audit Pack')}
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#047857,#059669);color:#FFFFFF;padding:12px 14px;font-size:14px;font-weight:900;border-radius:12px;box-shadow:0 4px 12px rgba(5,150,105,0.3);" onclick="openUnlockAuditPackModal()">
+          💳 ${t('Advance Audit Pack ཕྱེ་བ། ($0.99 / ₹99)', 'Unlock Advance Audit Pack ($0.99 / ₹99)')}
+        </button>
+        <button type="button" class="mini-btn" style="background:transparent;border:none;color:#64748B;font-size:11.5px;padding:6px;text-decoration:underline;cursor:pointer;text-align:center;" onclick="restoreAuditPackPurchases()">
+          🔄 ${t('སྔོན་མ་ཉོས་ཟིན་པ་སླར་གསོ། (Restore Purchases)', 'Restore Purchases')}
+        </button>
+      </div>
+
+      <div style="font-size:10.5px;color:#166534;font-weight:700;text-align:center;margin-top:10px;">
+        🆓 ${t('འབབ་གྲོན་རྩིས་ཤོག ཉིན་དེབ། མི་སྣའི་ཁ་ཐ་བཅས་ནམ་ཡང་རིན་མེད་ཡིན།', 'Income Statement, Cashbook & Khata are 100% Free forever.')}
+      </div>
+    </div>
+  `;
+}
+
+function openUnlockAuditPackModal() {
+  const sheet = document.getElementById('modalSheet');
+  if (!sheet) return;
+
+  sheet.innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="sheet-header" style="border-bottom:1.5px solid #FCD34D;">
+      <div class="sheet-title" style="color:#78350F;display:flex;align-items:center;gap:6px;">
+        <span>💎 ${t('Advance Audit Pack (རྩིས་ཞིབ་ཚོད་བལྟའི་ཁྱད་དེབ།)', 'Advance Audit Pack')}</span>
+      </div>
+      <button class="sheet-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div style="padding:16px 14px;text-align:center;">
+      <div style="width:64px;height:64px;margin:0 auto 12px;background:linear-gradient(135deg,#92400E,#D97706);border-radius:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(180,83,9,0.25);font-size:30px;color:#FEF08A;">
+        ⚖️
+      </div>
+
+      <div style="font-size:18px;font-weight:900;color:#1E293B;margin-bottom:6px;">
+        ${t('ཚོད་བལྟའི་རྩིས་ཤོག་དང་ལྷག་ཤོག', 'Trial Balance & Balance Sheet')}
+      </div>
+      <div style="font-size:12.5px;color:#64748B;line-height:1.55;margin-bottom:14px;max-width:340px;margin-left:auto;margin-right:auto;">
+        ${t(
+          'ཆེད་ལས་རྩིས་པའི་ཚོད་བལྟའི་རྩིས་ཤོག ལྷག་ཤོག་ཆ་ཚང་དང་། རྩིས་ཞིབ་ Excel/CSV ཕྱིར་འདྲེན། པར་འདེབས་བཅས་ཐེངས་གཅིག་སྤྲད་དེ་ཚེ་གང་བཀོལ་སྤྱོད་གནང་ཐུབ།',
+          'Unlock full professional Double-Entry Trial Balance, Matched Balance Sheet, Bilingual Excel/CSV exports, and PDF reports.'
+        )}
+      </div>
+
+      <!-- Price Callout Card -->
+      <div style="background:#FFFBEB;border:2px solid #F59E0B;border-radius:14px;padding:12px;margin-bottom:14px;">
+        <div style="font-size:10.5px;font-weight:800;color:#92400E;text-transform:uppercase;letter-spacing:0.5px;">
+          ${t('ཐེངས་གཅིག་སྤྲོད་པའི་རིན་གོང་། • ONE-TIME PURCHASE', 'ONE-TIME LIFETIME PURCHASE')}
+        </div>
+        <div style="font-size:26px;font-weight:900;color:#78350F;margin:4px 0;">
+          $0.99 <span style="font-size:14px;font-weight:700;color:#B45309;">(₹99 INR)</span>
+        </div>
+        <div style="font-size:11.5px;color:#047857;font-weight:700;">
+          ✨ ${t('ཟླ་རེའི་རིན་དོད་མེད། དྲ་མེད་སྐབས་ཀྱང་བཀོལ་ཐུབ། ནང་མི་མཉམ་སྤྱོད།', 'No subscriptions • Works 100% Offline • Family Sharing')}
+        </div>
+      </div>
+
+      <!-- Included Features List -->
+      <div style="text-align:left;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#334155;line-height:1.8;">
+        <div>✅ <strong>${t('ཚོད་བལྟའི་རྩིས་ཤོག', 'Trial Balance')}</strong>: ${t('ཐོག་མའི་ལྷག་མ་དང་གཡོན་གཡས་མཐའ་མའི་བསྡོམས་ཐོབ།', 'Opening, Debit, Credit & Closing columns')}</div>
+        <div>✅ <strong>${t('ལྷག་ཤོག', 'Balance Sheet')}</strong>: ${t('རྒྱུ་དངོས་དང་མ་རྩ་བུ་ལོན་གཉིས་ཆ་སྙོམས་རང་འགྲིག', 'Assets & Liabilities automatic balancing')}</div>
+        <div>✅ <strong>${t('Excel/CSV ཕྱིར་འདྲེན།', 'CSV Export')}</strong>: ${t('ཆེད་ལས་རྩིས་ཞིབ་པ་དང་རྩིས་ཁང་ལ་སྤྲོད་ཆོག', 'Bilingual audit spreadsheets')}</div>
+        <div>✅ <strong>${t('པར་འདེབས་དང་ PDF', 'Print & PDF')}</strong>: ${t('ཚོད་བལྟའི་རྩིས་ཤོག་དང་ལྷག་ཤོག་པར་འདེབས་དང་ཉར་ཚགས།', 'Official audit printouts')}</div>
+        <div style="color:#15803D;font-weight:700;border-top:1px dashed #CBD5E1;margin-top:6px;padding-top:4px;">
+          🆓 ${t('ཉིན་དེབ་དང་འབབ་གྲོན་རྩིས་ཤོག་ནམ་ཡང་རིན་མེད་ཡིན།', 'Cashbook, Ledger & Income Statement remain 100% Free forever.')}
+        </div>
+      </div>
+
+      <!-- Purchase CTA -->
+      <button type="button" class="action-btn" style="width:100%;background:linear-gradient(135deg,#047857,#059669);color:#FFFFFF;padding:14px;font-size:15px;font-weight:900;border-radius:12px;box-shadow:0 6px 16px rgba(5,150,105,0.3);margin-bottom:10px;" onclick="purchaseAuditPack()">
+        💳 ${t('Advance Audit Pack ཕྱེ་བ། ($0.99 / ₹99)', 'Unlock Advance Audit Pack ($0.99 / ₹99)')}
+      </button>
+
+      <!-- Apple Guideline 3.1.1 Restore Purchases -->
+      <button type="button" class="mini-btn" style="width:100%;background:transparent;border:none;color:#64748B;font-size:12px;padding:6px;text-decoration:underline;cursor:pointer;" onclick="restoreAuditPackPurchases()">
+        🔄 ${t('སྔོན་མ་ཉོས་ཟིན་པ་སླར་གསོ། (Restore Purchases)', 'Restore Existing Purchases')}
+      </button>
+    </div>
+  `;
+
+  document.getElementById('modalBackdrop').classList.add('open');
+}
+
+function purchaseAuditPack() {
+  // Check for native iOS / Capacitor / WebKit StoreKit bridge
+  if (typeof window !== 'undefined' && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.purchaseIAP) {
+    try {
+      window.webkit.messageHandlers.purchaseIAP.postMessage({
+        productId: AUDIT_PACK_PRODUCT_ID
+      });
+      showToast(t('Apple App Store སྦྲེལ་མཐུད་བྱེད་བཞིན་པ།...', 'Connecting to App Store...'));
+      return;
+    } catch (err) {
+      console.warn('Native StoreKit postMessage error:', err);
+    }
+  }
+
+  // Capacitor StoreKit Plugin (if installed)
+  if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PurchasePlugin) {
+    window.Capacitor.Plugins.PurchasePlugin.purchase({ productId: AUDIT_PACK_PRODUCT_ID })
+      .then(() => {
+        handleIAPPurchaseSuccess();
+      })
+      .catch(() => {
+        showToast(t('ཉོ་ཐོ་ཕྱིར་འཐེན་བྱས་པའམ་མ་འགྲིག་པ།', 'Purchase canceled or failed'));
+      });
+    return;
+  }
+
+  // Web Browser / Simulator mode: StoreKit sandbox mock
+  showToast(t('🛒 StoreKit སྦྲེལ་མཐུད་བྱེད་བཞིན་པ། ($0.99)', 'Connecting to App Store ($0.99)...'));
+  setTimeout(() => {
+    const confirmed = typeof confirm === 'function' ? confirm(
+      t(
+        'Apple App Store ནང་ Advance Audit Pack ($0.99 / ₹99) ཉོ་བར་གཏན་འཁེལ་ཡིན་ནམ?\n\n(StoreKit Sandbox ཚོད་ལྟའི་སྐབས་སུ་ "OK" མནན་ན་ཁྱད་དེབ་འཕྲལ་དུ་ཕྱེ་ཐུབ།)',
+        'Purchase Advance Audit Pack for $0.99 / ₹99 on Apple App Store?\n\nClick OK to confirm purchase and unlock Trial Balance & Balance Sheet.'
+      )
+    ) : true;
+    if (confirmed) {
+      handleIAPPurchaseSuccess();
+    }
+  }, 300);
+}
+
+function handleIAPPurchaseSuccess() {
+  state.isAuditPackUnlocked = true;
+  saveState();
+  renderAll();
+  closeModal();
+  showToast(t('🎉 Advance Audit Pack ཁྱད་དེབ་ལེགས་གྲུབ་ངང་ཕྱེ་ཟིན།', '🎉 Advance Audit Pack Unlocked Successfully!'));
+}
+
+function restoreAuditPackPurchases() {
+  if (typeof window !== 'undefined' && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.restoreIAP) {
+    try {
+      window.webkit.messageHandlers.restoreIAP.postMessage({});
+      showToast(t('Apple App Store ནས་སྔོན་མའི་ཉོས་ཟིན་སླར་གསོ་བྱེད་བཞིན་པ།...', 'Restoring purchases from App Store...'));
+      return;
+    } catch (err) {
+      console.warn('Native StoreKit restore error:', err);
+    }
+  }
+
+  if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PurchasePlugin) {
+    window.Capacitor.Plugins.PurchasePlugin.restorePurchases()
+      .then((res) => {
+        if (res && res.unlocked) {
+          handleIAPPurchaseSuccess();
+        } else {
+          showToast(t('ℹ️ ཉོས་ཟིན་རྩིས་ཐོ་གསར་པ་མ་རྙེད།', 'No previous purchases found for this Apple ID.'));
+        }
+      })
+      .catch(() => {
+        showToast(t('ℹ️ ཉོས་ཟིན་རྩིས་ཐོ་གསར་པ་མ་རྙེད།', 'No previous purchases found for this Apple ID.'));
+      });
+    return;
+  }
+
+  showToast(t('🔄 ཉོས་ཟིན་བརྟག་ཞིབ་བྱེད་བཞིན་པ།...', 'Checking purchase history...'));
+  setTimeout(() => {
+    if (state.isAuditPackUnlocked) {
+      showToast(t('✅ Advance Audit Pack སྔོན་ནས་ཉོས་ཟིན་འདུག', 'Advance Audit Pack is already active!'));
+    } else {
+      showToast(t('ℹ️ ཉོས་ཟིན་རྩིས་ཐོ་གསར་པ་མ་རྙེད།', 'No previous purchases found for this Apple ID.'));
+    }
+  }, 500);
+}
+
 // ----------------------------------------------------------------------------
 // TAB 4: ཚོད་བལྟའི་རྩིས་ཤོག (TRIAL BALANCE WITH PERIOD) & ལྷག་ཤོག (BALANCE SHEET)
 // ----------------------------------------------------------------------------
@@ -3380,7 +3654,8 @@ function renderReportsTab() {
 
     ${
       isAdvance
-        ? `
+        ? (state.isAuditPackUnlocked
+            ? `
     <!-- 2. ཚོད་བལྟའི་རྩིས་ཤོག (TRIAL BALANCE: Opening, Dr, Cr, Closing) -->
     <div class="report-card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
@@ -3606,6 +3881,7 @@ function renderReportsTab() {
       </div>
     </div>
     `
+            : renderLockedAuditPackCard())
         : `
     <!-- Simple Mode Notice & Instant Pro Switch -->
     <div class="report-card no-print" style="background:#FFFBEB;border:2px dashed #F59E0B;text-align:center;padding:16px;">
@@ -3816,6 +4092,10 @@ function generateBilingualCsvContent(bookId, periodFrom, periodTo) {
 }
 
 function exportBilingualCSV() {
+  if (!state.isAuditPackUnlocked) {
+    openUnlockAuditPackModal();
+    return;
+  }
   const csvContent = generateBilingualCsvContent(state.activeBookId, state.periodFrom, state.periodTo);
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const filename = `Tibetan_Account_Book_Report_${state.activeBookId}.csv`;
@@ -4995,6 +5275,10 @@ function getPrintableTrialBalanceHtml() {
 }
 
 function printOrExportTrialBalance() {
+  if (!state.isAuditPackUnlocked) {
+    openUnlockAuditPackModal();
+    return;
+  }
   const isCapacitor = typeof window !== 'undefined' && Boolean(window.Capacitor);
   const htmlContent = getPrintableTrialBalanceHtml();
 
@@ -8715,6 +8999,36 @@ function openAppSettingsModal() {
       </div>
     </div>
 
+    <!-- 1B. Photo Attachment Compression Quality (High-Resolution Camera Optimization) -->
+    <div class="report-card" style="background:#F8FAFC;border:1.5px solid #CBD5E1;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:13.5px;font-weight:800;color:#0F172A;">
+          📸 ${t('འདྲ་པར་གྱི་སྤུས་ཚད། (Photo Quality)', 'Receipt Photo Quality & Size')}
+        </span>
+        <span class="badge" style="background:#DCFCE7;color:#166534;font-weight:700;">
+          ${(state.photoQuality || 'standard') === 'compact' ? '⚡ Compact (~90KB)' : (state.photoQuality || 'standard') === 'hd' ? '🖼️ HD (~400KB)' : '📄 Crisp (~150KB)'}
+        </span>
+      </div>
+      <div style="font-size:11.5px;color:#64748B;line-height:1.5;margin-bottom:10px;">
+        ${t(
+          'ཁ་པར་གྱི་འདྲ་པར་ཆེ་བ་རྣམས་ཡི་གེ་གསལ་པོ་རང་འཇགས་ཐོག་ 98% ཆུང་དུ་བཏང་ནས་ཤོང་ཚད་གྲོན་ཆུང་བྱེད།',
+          'Downsample high-megapixel camera photos into lightweight receipts (~150KB) while keeping printed text razor sharp.'
+        )}
+      </div>
+
+      <div class="segmented-bar" style="margin-bottom:6px;">
+        <button type="button" class="seg-btn ${(state.photoQuality || 'standard') === 'compact' ? 'active' : ''}" onclick="setPhotoQuality('compact')">
+          ⚡ ${t('ཆུང་ཤོས།', 'Compact (~90KB)')}
+        </button>
+        <button type="button" class="seg-btn ${(state.photoQuality || 'standard') === 'standard' ? 'active' : ''}" onclick="setPhotoQuality('standard')">
+          📄 ${t('ཚད་ལྡན།', 'Crisp Standard (~150KB)')}
+        </button>
+        <button type="button" class="seg-btn ${(state.photoQuality || 'standard') === 'hd' ? 'active' : ''}" onclick="setPhotoQuality('hd')">
+          🖼️ ${t('མཐོ་ཤོས།', 'Full HD (~400KB)')}
+        </button>
+      </div>
+    </div>
+
     <!-- 2. Currency & Add Currency -->
     <div class="report-card" style="background:#F0F9FF;border:1.5px solid #BAE6FD;margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -9118,360 +9432,9 @@ function toggleViewMode(mode) {
 // Per Apple App Store Guideline 3.1.1 & 3.2.2, direct external donation,
 // UPI, and PayPal links are excluded on iOS. The app is 100% free with no in-app purchases.
 
-// ==========================================
-// CREATOR DONATION & SUPPORT (UPI & PAYPAL)
-// ==========================================
-const CREATOR_DONATION = {
-  upiId: 'tendar6666@okhdfcbank',
-  name: 'Tenzin Tendar',
-  paypalUrl: 'https://paypal.me/TenzinTendar?locale.x=en_GB&country.x=IN'
-};
-
-function openSupportCreatorModal(defaultAmt = 500) {
-  const sheet = document.getElementById('modalSheet');
-  const initialUpiUrl = `upi://pay?pa=${CREATOR_DONATION.upiId}&pn=${encodeURIComponent(CREATOR_DONATION.name)}&am=${defaultAmt}&cu=INR&tn=${encodeURIComponent('Support Tibetan Account Book')}`;
-
-  sheet.innerHTML = `
-    <div class="sheet-handle"></div>
-    <div class="sheet-header">
-      <div class="sheet-title" style="color:#881337;">🙏 ${t('གསར་བཟོ་བར་རྒྱབ་སྐྱོར།', 'Support the Creator')}</div>
-      <button class="sheet-close" onclick="closeModal()">✕</button>
-    </div>
-
-    <div class="receipt-paper" style="padding:14px;margin-bottom:12px;">
-      <div style="text-align:center;font-weight:800;font-size:15px;color:#4C0519;margin-bottom:4px;">
-        ༄༅། །བོད་མིའི་སྤྱི་ཕན་རིན་མེད་མཉེན་ཆས།
-      </div>
-      <div style="font-size:12.5px;color:#334155;line-height:1.55;text-align:center;">
-        ${t(
-          'བོད་ཀྱི་རྩིས་དེབ་ (Tibetan Account Book) འདི་ཚོང་པ་དང་། དགོན་སྡེ། མི་མང་ཡོངས་ལ་རྒྱུན་དུ་ ༡༠༠% རིན་མེད་ཡིན། གལ་ཏེ་མཉེན་ཆས་འདིས་ཁྱེད་ཀྱི་ཕྱག་ལས་ལ་ཕན་ཐོགས་བྱུང་ན་གསར་བཟོ་བར་ཇ་རིན་ནམ་རྒྱབ་སྐྱོར་གནང་ཐུབ།',
-          'Tibetan Account Book is 100% free forever for our community. If this app helps your shop, monastery, or home, you can voluntarily support the creator!'
-        )}
-      </div>
-    </div>
-
-    <div class="ios-section-title" style="margin-top:2px;">
-      <span>☕ ${t('ཇ་རིན་གྲངས་འབོར་འདེམས་རོགས།', 'Choose Support Amount')}</span>
-    </div>
-
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
-      <button type="button" class="cat-chip ${defaultAmt === 100 ? 'selected' : ''}" onclick="setSupportAmount(100)">
-        <span class="cat-chip-icon">☕</span>
-        <span class="cat-chip-bo">བོད་ཇ་གང་།</span>
-        <span class="cat-chip-en">₹100 / $3</span>
-      </button>
-      <button type="button" class="cat-chip ${defaultAmt === 500 ? 'selected' : ''}" onclick="setSupportAmount(500)">
-        <span class="cat-chip-icon">🥟</span>
-        <span class="cat-chip-bo">ཇ་དང་མོག་མོག</span>
-        <span class="cat-chip-en">₹500 / $10</span>
-      </button>
-      <button type="button" class="cat-chip ${defaultAmt === 1100 ? 'selected' : ''}" onclick="setSupportAmount(1100)">
-        <span class="cat-chip-icon">🧣</span>
-        <span class="cat-chip-bo">ཁ་བཏགས་རྒྱབ་སྐྱོར།</span>
-        <span class="cat-chip-en">₹1,100 / $25</span>
-      </button>
-    </div>
-
-    <div class="ios-input-group">
-      <label class="ios-input-label">${t('གང་འདོད་རྒྱབ་སྐྱོར་དངུལ་འབོར། (Custom Amount)', 'Support Amount')}</label>
-      <input type="number" id="supportAmountInput" class="ios-input big-amount" value="${defaultAmt}" oninput="updateSupportQrCode()" />
-    </div>
-
-    <!-- 1. India: UPI Payment Option -->
-    <div class="ios-input-group" style="background:#F0FDF4;border:1.5px solid #86EFAC;margin-bottom:10px;padding:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div>
-          <div style="font-size:13px;font-weight:800;color:#166534;">🇮🇳 UPI (GPay / PhonePe / Paytm / BHIM)</div>
-          <div style="font-size:12.5px;color:#15803D;font-weight:700;word-break:break-all;" id="creatorUpiId">${CREATOR_DONATION.upiId}</div>
-        </div>
-        <button type="button" class="mini-btn" style="background:#16A34A;color:#FFF;border:none;padding:6px 12px;font-weight:700;" onclick="copyCreatorUpi()">
-          📋 ${t('ངོ་བཤུས།', 'Copy')}
-        </button>
-      </div>
-
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button type="button" class="action-btn cash-in" style="flex:1;padding:10px;font-size:12.5px;" onclick="triggerUpiSupport()">
-          📲 ${t('UPI ཐོག་འབུལ།', 'Pay via UPI App')}
-        </button>
-        <button type="button" class="mini-btn" style="background:#DCFCE7;color:#15803D;border-color:#86EFAC;padding:10px 12px;font-weight:700;font-size:12px;" onclick="toggleSupportQrCode()">
-          📷 ${t('QR བཤེར་འབེབས།', 'Show QR')}
-        </button>
-      </div>
-
-      <!-- Optional QR Code Box -->
-      <div id="creatorQrBox" style="display:none;text-align:center;margin-top:10px;padding:10px;background:#FFFFFF;border-radius:8px;border:1px solid #CBD5E1;">
-        <img id="creatorQrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(initialUpiUrl)}" alt="UPI QR Code" style="width:160px;height:160px;display:inline-block;border-radius:6px;" />
-        <div style="font-size:12px;color:#64748B;margin-top:6px;">
-          ${t('GPay / PhonePe / Paytm གང་རུང་ནས་ QR Code འདི་བཤེར་ནས་འབུལ་ཐུབ།', 'Scan this QR code with any UPI app')}
-        </div>
-      </div>
-    </div>
-
-    <!-- 2. International / Abroad: PayPal Option -->
-    <div class="ios-input-group" style="background:#EFF6FF;border:1.5px solid #93C5FD;margin-bottom:12px;padding:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div>
-          <div style="font-size:13px;font-weight:800;color:#1E40AF;">🌍 International (PayPal)</div>
-          <div style="font-size:12px;color:#1D4ED8;font-weight:700;">paypal.me/TenzinTendar</div>
-        </div>
-        <button type="button" class="mini-btn" style="background:#2563EB;color:#FFF;border:none;padding:6px 12px;font-weight:700;" onclick="copyCreatorPaypal()">
-          📋 ${t('ངོ་བཤུས།', 'Copy')}
-        </button>
-      </div>
-
-      <button type="button" class="action-btn" style="width:100%;background:#0070BA;color:#FFFFFF;padding:10px;font-size:12.5px;font-weight:800;" onclick="openCreatorPaypal()">
-        🌐 ${t('PayPal ཐོག་འབུལ། (International)', 'Pay via PayPal (USD / EUR / GBP)')}
-      </button>
-    </div>
-  `;
-  document.getElementById('modalBackdrop').classList.add('open');
-}
-
-function setSupportAmount(amt) {
-  openSupportCreatorModal(amt);
-}
-
-function copyCreatorUpi() {
-  const upi = CREATOR_DONATION.upiId;
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(upi).catch(() => {});
-  }
-  showToast(t(`UPI ID ངོ་བཤུས་བླངས་ཟིན། (${upi})`, `Creator UPI ID copied: ${upi}`));
-}
-
-function copyCreatorPaypal() {
-  const url = CREATOR_DONATION.paypalUrl;
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(url).catch(() => {});
-  }
-  showToast(t('PayPal དྲ་ཐག་ངོ་བཤུས་བླངས་ཟིན།', 'PayPal link copied to clipboard!'));
-}
-
-function openCreatorPaypal() {
-  window.open(CREATOR_DONATION.paypalUrl, '_blank');
-}
-
-function triggerUpiSupport() {
-  const amtEl = document.getElementById('supportAmountInput');
-  const amt = amtEl ? Number(amtEl.value) || 500 : 500;
-  const upiUrl = `upi://pay?pa=${CREATOR_DONATION.upiId}&pn=${encodeURIComponent(CREATOR_DONATION.name)}&am=${amt}&cu=INR&tn=${encodeURIComponent('Support Tibetan Account Book')}`;
-  window.location.href = upiUrl;
-  showToast(t('ཐུགས་རྗེ་ཆེ། ཁྱེད་ཀྱི་རྒྱབ་སྐྱོར་ལ་བཀའ་དྲིན་ཆེ། 🙏', 'Thank you so much for supporting the creator! 🙏'));
-}
-
-function toggleSupportQrCode() {
-  const qrBox = document.getElementById('creatorQrBox');
-  if (!qrBox) return;
-  const isHidden = qrBox.style.display === 'none';
-  qrBox.style.display = isHidden ? 'block' : 'none';
-  if (isHidden) {
-    updateSupportQrCode();
-  }
-}
-
-function updateSupportQrCode() {
-  const amtEl = document.getElementById('supportAmountInput');
-  const qrImg = document.getElementById('creatorQrImg');
-  if (!qrImg) return;
-  const amt = amtEl ? Number(amtEl.value) || 500 : 500;
-  const upiUrl = `upi://pay?pa=${CREATOR_DONATION.upiId}&pn=${encodeURIComponent(CREATOR_DONATION.name)}&am=${amt}&cu=INR&tn=${encodeURIComponent('Support Tibetan Account Book')}`;
-  qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(upiUrl)}`;
-}
-
-function getAppShareData() {
-  const appUrl = window.location.href.split('#')[0].split('?')[0];
-  const shareTitle = '༄༅། །བོད་ཀྱི་རྩིས་དེབ། • Tibetan Account Book';
-  const shareText = `༄༅། །བོད་ཀྱི་རྩིས་དེབ། (Tibetan Account Book) — བོད་མིའི་སྤྱི་ཚོགས་དང་ཚོང་ལས། དགོན་སྡེ་ཁག་ལ་ཆེད་དུ་བཟོས་པའི་ ༡༠༠% རིན་མེད་རྩིས་དེབ་མཉེན་ཆས། རྩིས་རྒྱག་སྟབས་བདེ་ལ་དྲ་རྒྱ་མེད་ཀྱང་ (Offline) སྤྱོད་ཐུབ།\n\nFree Tibetan Accounting Web App for Community, Shops & Monasteries:\n👉 ${appUrl}`;
-  return { appUrl, shareTitle, shareText };
-}
-
-function shareAppToOthers() {
-  const { appUrl, shareTitle, shareText } = getAppShareData();
-
-  if (navigator && navigator.share) {
-    navigator
-      .share({
-        title: shareTitle,
-        text: shareText,
-        url: appUrl
-      })
-      .then(() => {
-        showToast(t('མཉམ་སྤྱོད་གནང་བར་ཐུགས་རྗེ་ཆེ། 🙏', 'Thank you for sharing the app! 🙏'));
-      })
-      .catch(err => {
-        if (!err || err.name !== 'AbortError') {
-          copyAppShareLink();
-        }
-      });
-  } else {
-    copyAppShareLink();
-  }
-}
-
-function shareAppViaWhatsApp() {
-  const { shareText } = getAppShareData();
-  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-  window.open(waUrl, '_blank');
-}
-
-function copyAppShareLink() {
-  const { shareText } = getAppShareData();
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(shareText).catch(() => {});
-  }
-  showToast(
-    t(
-      'མཉེན་ཆས་ཀྱི་དྲ་ཐག་ངོ་བཤུས་ཟིན། WhatsApp སོགས་སུ་སྦྱར་ཆོག 📋',
-      'App link copied! You can paste and share it. 📋'
-    )
-  );
-}
-
-function getAppShareData() {
-  const appUrl = window.location.href.split('#')[0].split('?')[0];
-  const shareTitle = '༄༅། །བོད་ཀྱི་རྩིས་དེབ། • Tibetan Account Book';
-  const shareText = `༄༅། །བོད་ཀྱི་རྩིས་དེབ། (Tibetan Account Book) — བོད་མིའི་སྤྱི་ཚོགས་དང་ཚོང་ལས། དགོན་སྡེ་ཁག་ལ་ཆེད་དུ་བཟོས་པའི་ ༡༠༠% རིན་མེད་རྩིས་དེབ་མཉེན་ཆས། རྩིས་རྒྱག་སྟབས་བདེ་ལ་དྲ་རྒྱ་མེད་ཀྱང་ (Offline) སྤྱོད་ཐུབ།\n\nFree Tibetan Accounting Web App for Community, Shops & Monasteries:\n👉 ${appUrl}`;
-  return { appUrl, shareTitle, shareText };
-}
-
-function shareAppToOthers() {
-  const { appUrl, shareTitle, shareText } = getAppShareData();
-
-  if (navigator && navigator.share) {
-    navigator
-      .share({
-        title: shareTitle,
-        text: shareText,
-        url: appUrl
-      })
-      .then(() => {
-        showToast(t('མཉམ་སྤྱོད་གནང་བར་ཐུགས་རྗེ་ཆེ། 🙏', 'Thank you for sharing the app! 🙏'));
-      })
-      .catch(err => {
-        if (!err || err.name !== 'AbortError') {
-          copyAppShareLink();
-        }
-      });
-  } else {
-    copyAppShareLink();
-  }
-}
-
-function shareAppViaWhatsApp() {
-  const { shareText } = getAppShareData();
-  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-  window.open(waUrl, '_blank');
-}
-
-function copyAppShareLink() {
-  const { shareText } = getAppShareData();
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(shareText).catch(() => {});
-  }
-  showToast(
-    t(
-      'མཉེན་ཆས་ཀྱི་དྲ་ཐག་ངོ་བཤུས་ཟིན། WhatsApp སོགས་སུ་སྦྱར་ཆོག 📋',
-      'App link copied! You can paste and share it. 📋'
-    )
-  );
-}
-
-function getAppShareData() {
-  const appUrl = window.location.href.split('#')[0].split('?')[0];
-  const shareTitle = '༄༅། །བོད་ཀྱི་རྩིས་དེབ། • Tibetan Account Book';
-  const shareText = `༄༅། །བོད་ཀྱི་རྩིས་དེབ། (Tibetan Account Book) — བོད་མིའི་སྤྱི་ཚོགས་དང་ཚོང་ལས། དགོན་སྡེ་ཁག་ལ་ཆེད་དུ་བཟོས་པའི་ ༡༠༠% རིན་མེད་རྩིས་དེབ་མཉེན་ཆས། རྩིས་རྒྱག་སྟབས་བདེ་ལ་དྲ་རྒྱ་མེད་ཀྱང་ (Offline) སྤྱོད་ཐུབ།\n\nFree Tibetan Accounting Web App for Community, Shops & Monasteries:\n👉 ${appUrl}`;
-  return { appUrl, shareTitle, shareText };
-}
-
-function shareAppToOthers() {
-  const { appUrl, shareTitle, shareText } = getAppShareData();
-
-  if (navigator && navigator.share) {
-    navigator
-      .share({
-        title: shareTitle,
-        text: shareText,
-        url: appUrl
-      })
-      .then(() => {
-        showToast(t('མཉམ་སྤྱོད་གནང་བར་ཐུགས་རྗེ་ཆེ། 🙏', 'Thank you for sharing the app! 🙏'));
-      })
-      .catch(err => {
-        if (!err || err.name !== 'AbortError') {
-          copyAppShareLink();
-        }
-      });
-  } else {
-    copyAppShareLink();
-  }
-}
-
-function shareAppViaWhatsApp() {
-  const { shareText } = getAppShareData();
-  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-  window.open(waUrl, '_blank');
-}
-
-function copyAppShareLink() {
-  const { shareText } = getAppShareData();
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(shareText).catch(() => {});
-  }
-  showToast(
-    t(
-      'མཉེན་ཆས་ཀྱི་དྲ་ཐག་ངོ་བཤུས་ཟིན། WhatsApp སོགས་སུ་སྦྱར་ཆོག 📋',
-      'App link copied! You can paste and share it. 📋'
-    )
-  );
-}
-
-function getAppShareData() {
-  const appUrl = window.location.href.split('#')[0].split('?')[0];
-  const shareTitle = '༄༅། །བོད་ཀྱི་རྩིས་དེབ། • Tibetan Account Book';
-  const shareText = `༄༅། །བོད་ཀྱི་རྩིས་དེབ། (Tibetan Account Book) — བོད་མིའི་སྤྱི་ཚོགས་དང་ཚོང་ལས། དགོན་སྡེ་ཁག་ལ་ཆེད་དུ་བཟོས་པའི་ ༡༠༠% རིན་མེད་རྩིས་དེབ་མཉེན་ཆས། རྩིས་རྒྱག་སྟབས་བདེ་ལ་དྲ་རྒྱ་མེད་ཀྱང་ (Offline) སྤྱོད་ཐུབ།\n\nFree Tibetan Accounting Web App for Community, Shops & Monasteries:\n👉 ${appUrl}`;
-  return { appUrl, shareTitle, shareText };
-}
-
-function shareAppToOthers() {
-  const { appUrl, shareTitle, shareText } = getAppShareData();
-
-  if (navigator && navigator.share) {
-    navigator
-      .share({
-        title: shareTitle,
-        text: shareText,
-        url: appUrl
-      })
-      .then(() => {
-        showToast(t('མཉམ་སྤྱོད་གནང་བར་ཐུགས་རྗེ་ཆེ། 🙏', 'Thank you for sharing the app! 🙏'));
-      })
-      .catch(err => {
-        if (!err || err.name !== 'AbortError') {
-          copyAppShareLink();
-        }
-      });
-  } else {
-    copyAppShareLink();
-  }
-}
-
-function shareAppViaWhatsApp() {
-  const { shareText } = getAppShareData();
-  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-  window.open(waUrl, '_blank');
-}
-
-function copyAppShareLink() {
-  const { shareText } = getAppShareData();
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(shareText).catch(() => {});
-  }
-  showToast(
-    t(
-      'མཉེན་ཆས་ཀྱི་དྲ་ཐག་ངོ་བཤུས་ཟིན། WhatsApp སོགས་སུ་སྦྱར་ཆོག 📋',
-      'App link copied! You can paste and share it. 📋'
-    )
-  );
+function openSupportCreatorModal() {
+  // Safe fallback to native sharing for iOS
+  shareAppToOthers();
 }
 
 function getAppShareData() {

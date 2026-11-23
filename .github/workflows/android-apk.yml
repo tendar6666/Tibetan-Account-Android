@@ -1,4 +1,4 @@
-name: Build Native Android App (.apk)
+name: Build Native Android App (Play Store .aab & .apk)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-android:
-    name: Build Android APK on Ubuntu Cloud
+    name: Build Signed Google Play AAB & APK
     runs-on: ubuntu-latest
 
     steps:
@@ -32,7 +32,29 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: 4.1. Lock Screen Orientation to Portrait
+      - name: 4.1. Apply Custom Tibetan Account Book Launcher Icons
+        run: |
+          if [ -f "app-icon.png" ]; then
+            sudo apt-get update && sudo apt-get install -y imagemagick
+            convert app-icon.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert app-icon.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+            convert app-icon.png -resize 108x108 android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
+            convert app-icon.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert app-icon.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+            convert app-icon.png -resize 162x162 android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png
+            convert app-icon.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert app-icon.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+            convert app-icon.png -resize 216x216 android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
+            convert app-icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert app-icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+            convert app-icon.png -resize 324x324 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
+            convert app-icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            convert app-icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+            convert app-icon.png -resize 432x432 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
+            echo "Custom Tibetan Account Book launcher icons generated!"
+          fi
+
+      - name: 4.2. Lock Screen Orientation to Portrait & Set Version
         run: |
           node -e '
             const fs = require("fs");
@@ -47,16 +69,63 @@ jobs:
             }
           '
 
-      - name: 5. Build Installable Android APK
+      - name: 4.3. Configure Release Keystore & Signing in build.gradle
+        run: |
+          if [ ! -f "release-keystore.jks" ]; then
+            keytool -genkeypair -v \
+              -keystore release-keystore.jks \
+              -alias tibetanaccountbook \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass TibetanAccount2026! \
+              -keypass TibetanAccount2026! \
+              -dname "CN=Tenzin Tendar, OU=Community, O=Tibetan Account Book, L=Dharamshala, ST=HP, C=IN"
+          fi
+          cp release-keystore.jks android/app/release-keystore.jks
+
+          node -e '
+            const fs = require("fs");
+            const bgPath = "android/app/build.gradle";
+            let bg = fs.readFileSync(bgPath, "utf8");
+            bg = bg.replace("versionCode 1", "versionCode 2");
+            bg = bg.replace("versionName \"1.0\"", "versionName \"2.0.0\"");
+            const signingBlock = `
+                signingConfigs {
+                    release {
+                        storeFile file("release-keystore.jks")
+                        storePassword "TibetanAccount2026!"
+                        keyAlias "tibetanaccountbook"
+                        keyPassword "TibetanAccount2026!"
+                    }
+                }
+                buildTypes {
+                    release {
+                        signingConfig signingConfigs.release
+                        minifyEnabled false
+                        proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+                    }
+                }
+            `;
+            bg = bg.replace(/buildTypes\s*\{[\s\S]*?\n\s*\}/, signingBlock.trim());
+            fs.writeFileSync(bgPath, bg, "utf8");
+            console.log("Configured release signing in android/app/build.gradle");
+          '
+
+      - name: 5. Build Signed Google Play App Bundle (.aab) & Installable APK (.apk)
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk ../Tibetan-Account-Book-Android.apk
+          ./gradlew bundleRelease assembleRelease
+          cp app/build/outputs/bundle/release/app-release.aab ../Tibetan-Account-Book-PlayStore.aab
+          cp app/build/outputs/apk/release/app-release.apk ../Tibetan-Account-Book-Android.apk
 
-      - name: 6. Upload Installable Android APK Artifact
+      - name: 6. Upload Google Play Store AAB & APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Tibetan-Account-Book-Android-APK
-          path: Tibetan-Account-Book-Android.apk
+          name: Tibetan-Account-Book-GooglePlay-Bundle
+          path: |
+            Tibetan-Account-Book-PlayStore.aab
+            Tibetan-Account-Book-Android.apk
+            release-keystore.jks
           retention-days: 90
